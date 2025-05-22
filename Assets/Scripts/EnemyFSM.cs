@@ -29,7 +29,6 @@ public class EnemyFSM : MonoBehaviour
 
     [Header("Retreat Settings")]
     public float healingRate = 5f;
-    public float safeDistance = 8f;
 
     private float attackCooldown = 1.5f;
     private float attackTimer;
@@ -49,14 +48,14 @@ public class EnemyFSM : MonoBehaviour
         voiceManager = GetComponent<VoiceManager>();
         animator = GetComponentInChildren<Animator>();
 
-        Debug.Log($"🎯 Enemy's target player: {player?.name}");
-
         ApplyGrudgeBehavior();
         ValidatePlayerHealthSystem();
     }
 
     private void Update()
     {
+        if (player == null) return;
+
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
         bool canSeePlayer = fieldOfView.CanSeePlayer;
 
@@ -88,14 +87,12 @@ public class EnemyFSM : MonoBehaviour
         RotateTowardsMovement();
     }
 
-    #region Combat State Handlers
+    #region --- Combat Logic ---
 
     private void ResetBlockingIfNotAttacking()
     {
         if (stateManager.currentState != EnemyStateManager.EnemyState.Attack)
-        {
             SetBlocking(false);
-        }
     }
 
     private void EngageOrAttack(float distanceToPlayer)
@@ -106,37 +103,11 @@ public class EnemyFSM : MonoBehaviour
         }
         else
         {
-            agent.SetDestination(transform.position); // Stop
+            agent.SetDestination(transform.position);
             EndSearch();
             stateManager.SetState(EnemyStateManager.EnemyState.Attack);
             Attack();
         }
-    }
-
-    private void TransitionToChase()
-    {
-        EndSearch();
-        stateManager.SetState(EnemyStateManager.EnemyState.Chase);
-        Chase();
-    }
-
-    private void HandleSearchTimer()
-    {
-        searchTimer -= Time.deltaTime;
-        if (searchTimer <= 0f)
-        {
-            EndSearch();
-            stateManager.SetState(EnemyStateManager.EnemyState.Patrol);
-        }
-    }
-
-    private void Chase()
-    {
-        if (player == null) return;
-
-        agent.SetDestination(player.position);
-        voiceManager?.PlayAlertedVoice();
-        RotateTowardsMovement();
     }
 
     private void Attack()
@@ -149,7 +120,6 @@ public class EnemyFSM : MonoBehaviour
         attackTimer = 0f;
 
         string action = enemyAI.DecideNextAction();
-
         switch (action)
         {
             case "Attack":
@@ -171,12 +141,6 @@ public class EnemyFSM : MonoBehaviour
 
     private void TryAttackPlayer()
     {
-        if (player == null)
-        {
-            Debug.LogError("❌ Player reference is null.");
-            return;
-        }
-
         float distance = Vector3.Distance(transform.position, player.position);
         if (distance > attackDistance)
         {
@@ -247,7 +211,7 @@ public class EnemyFSM : MonoBehaviour
 
     #endregion
 
-    #region Retreat & Healing
+    #region --- Retreat & Healing ---
 
     private void Retreat()
     {
@@ -288,7 +252,7 @@ public class EnemyFSM : MonoBehaviour
 
     #endregion
 
-    #region Search & Utility
+    #region --- Searching ---
 
     private void StartSearch()
     {
@@ -298,11 +262,33 @@ public class EnemyFSM : MonoBehaviour
         Debug.Log("🟠 Enemy is searching for the player...");
     }
 
+    private void HandleSearchTimer()
+    {
+        searchTimer -= Time.deltaTime;
+        if (searchTimer <= 0f)
+        {
+            EndSearch();
+            stateManager.SetState(EnemyStateManager.EnemyState.Patrol);
+        }
+    }
+
     private void EndSearch()
     {
         isSearching = false;
         animator.ResetTrigger("punch");
         SetBlocking(false);
+    }
+
+    #endregion
+
+    #region --- Utility Methods ---
+
+    private void TransitionToChase()
+    {
+        EndSearch();
+        stateManager.SetState(EnemyStateManager.EnemyState.Chase);
+        agent.SetDestination(player.position);
+        voiceManager?.PlayAlertedVoice();
     }
 
     private void RotateTowardsMovement()
