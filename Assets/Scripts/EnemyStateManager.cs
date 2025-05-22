@@ -1,16 +1,10 @@
 using UnityEngine;
 using UnityEngine.AI;
 
-/// <summary>
-/// Manages the enemy's current state and handles patrol behavior.
-/// Other scripts should call SetState to trigger transitions.
-/// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
+[RequireComponent(typeof(Animator))] // Ensure Animator is present
 public class EnemyStateManager : MonoBehaviour
 {
-    /// <summary>
-    /// Possible states for the enemy FSM.
-    /// </summary>
     public enum EnemyState
     {
         Patrol,
@@ -24,22 +18,23 @@ public class EnemyStateManager : MonoBehaviour
     public EnemyState currentState = EnemyState.Patrol;
 
     [Header("Patrol Settings")]
-    public Transform[] patrolPoints;           // Points to walk between during patrol
+    public Transform[] patrolPoints;
     private int currentPatrolIndex = 0;
 
     private NavMeshAgent agent;
+    private Animator animator; // ✅ Add animator reference
 
     private void Start()
     {
         agent = GetComponent<NavMeshAgent>();
+        animator = GetComponent<Animator>(); // ✅ Get animator
+        agent.updateRotation = false; // We'll handle rotation manually
 
-        // Begin in Patrol state
         SetState(EnemyState.Patrol);
     }
 
     private void Update()
     {
-        // Debug current state
         switch (currentState)
         {
             case EnemyState.Patrol:
@@ -49,51 +44,79 @@ public class EnemyStateManager : MonoBehaviour
 
             case EnemyState.Chase:
                 Debug.Log("🔴 Chase State");
-                // Logic handled by EnemyFSM
                 break;
 
             case EnemyState.Attack:
                 Debug.Log("🟡 Attack State");
-                // Logic handled by EnemyFSM
                 break;
 
             case EnemyState.Search:
                 Debug.Log("🟠 Search State");
-                // Logic handled by EnemyFSM
                 break;
 
             case EnemyState.Retreat:
                 Debug.Log("⚫ Retreat State");
-                // Logic handled by EnemyFSM
                 break;
         }
     }
 
-    /// <summary>
-    /// Sets the enemy's current FSM state.
-    /// </summary>
-    /// <param name="newState">The new state to transition into.</param>
     public void SetState(EnemyState newState)
     {
         if (currentState != newState)
         {
             Debug.Log($"State changed from {currentState} to {newState}");
             currentState = newState;
+
+            // ✅ Update animation based on state
+            switch (newState)
+            {
+                case EnemyState.Patrol:
+                    animator.SetBool("isWalking", true);
+                    animator.SetBool("isRunning", false);
+                    animator.SetBool("isAttacking", false);
+                    break;
+
+                case EnemyState.Chase:
+                    animator.SetBool("isWalking", false);
+                    animator.SetBool("isRunning", true);
+                    break;
+
+                case EnemyState.Attack:
+                    animator.SetBool("isWalking", false);
+                    animator.SetBool("isRunning", false);
+                    animator.SetTrigger("attack");
+                    break;
+
+                default:
+                    animator.SetBool("isWalking", false);
+                    animator.SetBool("isRunning", false);
+                    break;
+            }
         }
     }
+private void Patrol()
+{
+    if (patrolPoints.Length == 0 || agent == null) return;
 
-    /// <summary>
-    /// Patrol behavior: moves between patrol points in sequence.
-    /// </summary>
-    private void Patrol()
+    // Move to next point if close enough
+    if (!agent.pathPending && agent.remainingDistance < 0.5f)
     {
-        if (patrolPoints.Length == 0 || agent == null) return;
-
-        // If close to current patrol target, go to next point
-        if (!agent.pathPending && agent.remainingDistance < 0.5f)
-        {
-            currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
-            agent.SetDestination(patrolPoints[currentPatrolIndex].position);
-        }
+        currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
+        agent.SetDestination(patrolPoints[currentPatrolIndex].position);
     }
+
+    // Rotate to face direction of movement
+    if (agent.velocity.sqrMagnitude > 0.1f)
+    {
+        Quaternion targetRotation = Quaternion.LookRotation(agent.velocity.normalized);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
+    }
+
+    // Update animation speed parameter
+    float speed = agent.velocity.magnitude;
+    animator.SetFloat("Speed", speed);
+}
+
+
+
 }

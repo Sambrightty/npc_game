@@ -1,50 +1,54 @@
 using UnityEngine;
 
 /// <summary>
-/// EnemyGrudgeMemory tracks how many times the player has defeated this enemy,
-/// increasing aggression in future encounters by storing a "grudge level".
-/// The value is persisted using PlayerPrefs across game sessions.
+/// Tracks how many times the player has defeated this enemy,
+/// increasing aggression across future encounters via a persistent "grudge level".
 /// </summary>
 public class EnemyGrudgeMemory : MonoBehaviour
 {
-    private string grudgeKey = "EnemyGrudgeLevel";    // Key used to store grudge in PlayerPrefs
-    public int grudgeLevel = 0;                       // Current grudge level (modifiable by other systems)
+    private const string GrudgeKey = "EnemyGrudgeLevel"; // Persistent PlayerPrefs key
+    private int grudgeLevel;
 
     /// <summary>
-    /// Loads the saved grudge level from PlayerPrefs when the enemy spawns.
+    /// Public getter for the current grudge level (read-only).
+    /// Used by external AI systems to adjust behavior.
     /// </summary>
-    void Start()
+    public int GrudgeLevel => grudgeLevel;
+
+    /// <summary>
+    /// Load the stored grudge level when this enemy is instantiated.
+    /// </summary>
+    private void Start()
     {
-        grudgeLevel = PlayerPrefs.GetInt(grudgeKey, 0); // Default to 0 if no previous grudge saved
+        grudgeLevel = PlayerPrefs.GetInt(GrudgeKey, 0);
         Debug.Log($"[Grudge Memory] Loaded Grudge Level: {grudgeLevel}");
     }
 
     /// <summary>
-    /// Increments the enemy's grudge level and saves it persistently.
-    /// Called when the player defeats this enemy.
+    /// Increase the grudge level by one and save it persistently.
+    /// Call this when the player defeats the enemy.
     /// </summary>
     public void IncreaseGrudge()
     {
         grudgeLevel++;
-        PlayerPrefs.SetInt(grudgeKey, grudgeLevel);  // Save the updated level
-        PlayerPrefs.Save();                          // Ensure it's written to disk
+        PlayerPrefs.SetInt(GrudgeKey, grudgeLevel);
+        PlayerPrefs.Save();
         Debug.Log($"[Grudge Memory] Increased Grudge Level to: {grudgeLevel}");
     }
 
     /// <summary>
-    /// Resets the enemy's grudge level to 0 and clears it from PlayerPrefs.
-    /// Useful for restarting campaigns or new players.
+    /// Reset the grudge level to zero and remove it from storage.
+    /// Useful for campaign resets or debugging.
     /// </summary>
     public void ResetGrudge()
     {
         grudgeLevel = 0;
-        PlayerPrefs.DeleteKey(grudgeKey);            // Remove from persistent storage
+        PlayerPrefs.DeleteKey(GrudgeKey);
         Debug.Log("[Grudge Memory] Grudge Level Reset");
     }
 
     /// <summary>
-    /// Returns the current grudge level.
-    /// Used by AI systems to modify behavior.
+    /// Retrieve the current grudge level.
     /// </summary>
     public int GetGrudgeLevel()
     {

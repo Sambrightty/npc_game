@@ -2,41 +2,36 @@ using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
 
-/// <summary>
-/// EnemyFSM handles the finite state machine logic for an enemy NPC,
-/// transitioning between Patrol, Chase, Attack, Retreat, and Search states
-/// based on player visibility, distance, and health conditions. Includes
-/// adaptive behavior via GeneticEnemyAI and player tracking.
-/// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(EnemyStateManager))]
 public class EnemyFSM : MonoBehaviour
 {
     [Header("References")]
-    public Transform player;                          // Target player object
-    public FieldOfView fieldOfView;                   // Handles player visibility checks
-    public HealthSystem healthSystem;                 // Enemy health and blocking logic
-    public PlayerBehaviorTracker behaviorTracker;     // Tracks player behavior for AI evolution
+    public Transform player;
+    public FieldOfView fieldOfView;
+    public HealthSystem healthSystem;
+    public PlayerBehaviorTracker behaviorTracker;
 
-    private NavMeshAgent agent;                       // Unity navigation agent
-    private EnemyStateManager stateManager;           // Manages enemy's current FSM state
-    private GeneticEnemyAI enemyAI;                   // Provides adaptive decision-making logic
-    private EnemyGrudgeMemory grudgeMemory;           // Modifies stats based on grudge level
-    private VoiceManager voiceManager;                // Handles enemy voice playback
+    private NavMeshAgent agent;
+    private EnemyStateManager stateManager;
+    private GeneticEnemyAI enemyAI;
+    private EnemyGrudgeMemory grudgeMemory;
+    private VoiceManager voiceManager;
+    private Animator animator;
 
     [Header("State Thresholds")]
-    public float chaseDistance = 10f;                 // Distance within which enemy will chase
-    public float attackDistance = 2f;                 // Distance within which enemy will attack
-    public float lowHealthThreshold = 30f;            // Below this, enemy will retreat
+    public float chaseDistance = 10f;
+    public float attackDistance = 2f;
+    public float lowHealthThreshold = 30f;
 
     [Header("Search Settings")]
-    public float searchDuration = 5f;                 // Time spent searching after losing player
+    public float searchDuration = 5f;
 
     [Header("Retreat Settings")]
-    public float healingRate = 5f;                    // Healing rate while retreating
-    public float safeDistance = 8f;                   // Safe distance from player to heal
+    public float healingRate = 5f;
+    public float safeDistance = 8f;
 
-    private float attackCooldown = 1.5f;              // Delay between attacks
+    private float attackCooldown = 1.5f;
     private float attackTimer;
     private float searchTimer;
 
@@ -45,12 +40,6 @@ public class EnemyFSM : MonoBehaviour
     private bool isHealing = false;
     private Vector3 retreatTarget;
 
-    private Animator animator;
-
-
-    /// <summary>
-    /// Initializes components and adjusts behavior based on grudge level.
-    /// </summary>
     private void Start()
     {
         agent = GetComponent<NavMeshAgent>();
@@ -60,193 +49,227 @@ public class EnemyFSM : MonoBehaviour
         voiceManager = GetComponent<VoiceManager>();
         animator = GetComponentInChildren<Animator>();
 
+        Debug.Log($"🎯 Enemy's target player: {player?.name}");
 
-        ApplyGrudgeBehavior(); // Boost aggression if enemy holds a grudge
+        ApplyGrudgeBehavior();
+        ValidatePlayerHealthSystem();
     }
 
-    /// <summary>
-    /// FSM logic run every frame to determine enemy behavior.
-    /// </summary>
     private void Update()
     {
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
         bool canSeePlayer = fieldOfView.CanSeePlayer;
 
-        // Prioritize retreating if health is low
+        animator.SetFloat("Speed", agent.velocity.magnitude);
+        ResetBlockingIfNotAttacking();
+
         if (healthSystem.currentHealth < lowHealthThreshold)
         {
             stateManager.SetState(EnemyStateManager.EnemyState.Retreat);
             Retreat();
         }
-        // Attack if within striking distance and player is visible
         else if (canSeePlayer && distanceToPlayer <= attackDistance)
         {
-            EndSearch();
-            stateManager.SetState(EnemyStateManager.EnemyState.Attack);
-            Attack();
+            EngageOrAttack(distanceToPlayer);
         }
-        // Chase if player is in view but far from attack range
         else if (canSeePlayer && distanceToPlayer <= chaseDistance)
         {
-            EndSearch();
-            stateManager.SetState(EnemyStateManager.EnemyState.Chase);
-            Chase();
+            TransitionToChase();
         }
-        // Player was visible but now lost — begin searching
         else if (!canSeePlayer && IsInCombatState())
         {
             StartSearch();
         }
-        // Searching logic countdown
         else if (isSearching)
         {
-            searchTimer -= Time.deltaTime;
-            if (searchTimer <= 0f)
-            {
-                EndSearch();
-                stateManager.SetState(EnemyStateManager.EnemyState.Patrol);
-            }
+            HandleSearchTimer();
+        }
+
+        RotateTowardsMovement();
+    }
+
+    #region Combat State Handlers
+
+    private void ResetBlockingIfNotAttacking()
+    {
+        if (stateManager.currentState != EnemyStateManager.EnemyState.Attack)
+        {
+            SetBlocking(false);
         }
     }
 
-    /// <summary>
-    /// Adjusts enemy aggression based on grudge level memory.
-    /// </summary>
-    private void ApplyGrudgeBehavior()
+    private void EngageOrAttack(float distanceToPlayer)
     {
-        if (grudgeMemory == null) return;
-
-        int grudge = grudgeMemory.GetGrudgeLevel();
-        attackDistance += grudge * 0.5f;
-        chaseDistance += grudge * 1f;
-        agent.speed += grudge * 0.2f;
-
-        Debug.Log($"[Grudge AI] Adjusted stats — Attack: {attackDistance}, Chase: {chaseDistance}");
+        if (distanceToPlayer > 1.5f)
+        {
+            agent.SetDestination(player.position);
+        }
+        else
+        {
+            agent.SetDestination(transform.position); // Stop
+            EndSearch();
+            stateManager.SetState(EnemyStateManager.EnemyState.Attack);
+            Attack();
+        }
     }
 
-    /// <summary>
-    /// Moves toward the player while playing a voice alert.
-    /// </summary>
+    private void TransitionToChase()
+    {
+        EndSearch();
+        stateManager.SetState(EnemyStateManager.EnemyState.Chase);
+        Chase();
+    }
+
+    private void HandleSearchTimer()
+    {
+        searchTimer -= Time.deltaTime;
+        if (searchTimer <= 0f)
+        {
+            EndSearch();
+            stateManager.SetState(EnemyStateManager.EnemyState.Patrol);
+        }
+    }
+
     private void Chase()
-{
-    if (player == null) return;
-
-    agent.SetDestination(player.position);
-    voiceManager?.PlayAlertedVoice();
-
-    // Tell animator to play walking animation
-    animator.SetBool("isWalking", true);
-}
-
-
-    /// <summary>
-    /// Executes an attack cycle with cooldown and AI-driven decision-making.
-    /// </summary>
-  private void Attack()
-{
-    agent.SetDestination(transform.position); // Stop movement
-    animator.SetBool("isWalking", false); // Stop walking animation
-
-    attackTimer += Time.deltaTime;
-    if (attackTimer < attackCooldown) return;
-    attackTimer = 0f;
-
-    string action = enemyAI.DecideNextAction();
-    Debug.Log($"[AI Decision] Action: {action}");
-
-    switch (action)
     {
-        case "Attack":
-            TryAttackPlayer();
-            break;
-        case "Block":
+        if (player == null) return;
+
+        agent.SetDestination(player.position);
+        voiceManager?.PlayAlertedVoice();
+        RotateTowardsMovement();
+    }
+
+    private void Attack()
+    {
+        agent.SetDestination(transform.position);
+        SetBlocking(false);
+
+        attackTimer += Time.deltaTime;
+        if (attackTimer < attackCooldown) return;
+        attackTimer = 0f;
+
+        string action = enemyAI.DecideNextAction();
+
+        switch (action)
+        {
+            case "Attack":
+                TryAttackPlayer();
+                break;
+            case "Block":
+                TryStartBlock();
+                break;
+            case "Dodge":
+                Debug.Log("🌀 Enemy dodges!");
+                break;
+            default:
+                Debug.Log("😐 Enemy does nothing.");
+                break;
+        }
+
+        TrackAndEvolveBehavior();
+    }
+
+    private void TryAttackPlayer()
+    {
+        if (player == null)
+        {
+            Debug.LogError("❌ Player reference is null.");
+            return;
+        }
+
+        float distance = Vector3.Distance(transform.position, player.position);
+        if (distance > attackDistance)
+        {
+            Debug.Log("⚠️ Player is out of attack range.");
+            return;
+        }
+
+        HealthSystem playerHealth = player.GetComponent<HealthSystem>();
+        if (playerHealth == null)
+        {
+            Debug.LogError("🚨 No HealthSystem found on player!");
+            return;
+        }
+
+        if (!playerHealth.IsBlocking)
+        {
+            animator.SetTrigger("punch");
+            playerHealth.TakeDamage(10f);
+            Debug.Log("👊 Enemy punches the player!");
+        }
+        else
+        {
+            Debug.Log("🛡️ Player blocked the punch!");
+        }
+    }
+
+    private void TryStartBlock()
+    {
+        if (Vector3.Distance(transform.position, player.position) <= attackDistance + 0.5f)
+        {
             StartBlock();
-            break;
-        case "Dodge":
-            Debug.Log("🌀 Enemy dodges!");
-            break;
-        default:
-            Debug.Log("😐 Enemy does nothing.");
-            break;
+        }
+        else
+        {
+            Debug.Log("❌ Blocking skipped: player too far.");
+        }
     }
-
-    TrackAndEvolveBehavior();
-}
-
-
-    /// <summary>
-    /// Attempts to apply damage to the player if within range and unblocked.
-    /// </summary>
- private void TryAttackPlayer()
-{
-    if (Vector3.Distance(transform.position, player.position) > attackDistance) return;
-
-    HealthSystem playerHealth = player.GetComponent<HealthSystem>();
-    if (playerHealth == null) return;
-
-    if (!playerHealth.IsBlocking)
-    {
-        animator.SetTrigger("punch");  // Trigger punch animation
-        playerHealth.TakeDamage(10f);
-        Debug.Log("👊 Enemy punches the player!");
-    }
-    else
-    {
-        Debug.Log("🛡️ Player blocked the punch!");
-    }
-}
-
 
     private void StartBlock()
-{
-    healthSystem.IsBlocking = true;
-    animator.SetBool("isBlocking", true);  // Start block animation
-    Debug.Log("🛡️ Enemy blocks!");
-    Invoke(nameof(StopBlocking), 1f); // End block after 1 second
-}
-
-private void StopBlocking()
-{
-    healthSystem.IsBlocking = false;
-    animator.SetBool("isBlocking", false); // Stop block animation
-}
-
-
-    /// <summary>
-    /// Moves the enemy to a safe location to heal.
-    /// </summary>
-   private void Retreat()
-{
-    if (!isRetreating)
     {
-        Vector3 directionAway = (transform.position - player.position).normalized;
-        retreatTarget = transform.position + directionAway * 10f;
+        SetBlocking(true);
+        Debug.Log("🛡️ Enemy blocks!");
+        Invoke(nameof(StopBlocking), 1f);
+    }
 
-        if (NavMesh.SamplePosition(retreatTarget, out NavMeshHit hit, 10f, NavMesh.AllAreas))
+    private void StopBlocking()
+    {
+        SetBlocking(false);
+    }
+
+    private void SetBlocking(bool isBlocking)
+    {
+        healthSystem.IsBlocking = isBlocking;
+        animator.SetBool("isBlocking", isBlocking);
+    }
+
+    private void TrackAndEvolveBehavior()
+    {
+        if (behaviorTracker == null) return;
+
+        string behavior = behaviorTracker.GetBehaviorType();
+        if (!string.IsNullOrEmpty(behavior))
         {
-            agent.SetDestination(hit.position);
-            isRetreating = true;
-            voiceManager?.PlayRetreatVoice();
-
-            animator.SetBool("isWalking", true); // Start walking during retreat
+            enemyAI.EvolveGene(behavior);
+            behaviorTracker.ResetBehavior();
         }
     }
-    else
+
+    #endregion
+
+    #region Retreat & Healing
+
+    private void Retreat()
     {
-        // Once at target location, begin healing
-        if (Vector3.Distance(transform.position, retreatTarget) < 1.5f && !isHealing)
+        if (!isRetreating)
         {
-            animator.SetBool("isWalking", false); // Stop walking when healing
+            Vector3 directionAway = (transform.position - player.position).normalized;
+            retreatTarget = transform.position + directionAway * 10f;
+
+            if (NavMesh.SamplePosition(retreatTarget, out NavMeshHit hit, 10f, NavMesh.AllAreas))
+            {
+                agent.SetDestination(hit.position);
+                isRetreating = true;
+                voiceManager?.PlayRetreatVoice();
+            }
+        }
+        else if (Vector3.Distance(transform.position, retreatTarget) < 1.5f && !isHealing)
+        {
             isHealing = true;
             StartCoroutine(HealOverTime());
         }
     }
-}
 
-
-    /// <summary>
-    /// Heals the enemy over time while stationary.
-    /// </summary>
     private IEnumerator HealOverTime()
     {
         Debug.Log("💊 Enemy starts healing...");
@@ -263,9 +286,10 @@ private void StopBlocking()
         stateManager.SetState(EnemyStateManager.EnemyState.Patrol);
     }
 
-    /// <summary>
-    /// Triggers search mode when the player is lost.
-    /// </summary>
+    #endregion
+
+    #region Search & Utility
+
     private void StartSearch()
     {
         stateManager.SetState(EnemyStateManager.EnemyState.Search);
@@ -274,43 +298,60 @@ private void StopBlocking()
         Debug.Log("🟠 Enemy is searching for the player...");
     }
 
-    /// <summary>
-    /// Ends the search mode.
-    /// </summary>
     private void EndSearch()
     {
         isSearching = false;
+        animator.ResetTrigger("punch");
+        SetBlocking(false);
     }
 
-    /// <summary>
-    /// Informs the adaptive AI about the player’s latest tactic.
-    /// </summary>
-    private void TrackAndEvolveBehavior()
+    private void RotateTowardsMovement()
     {
-        if (behaviorTracker == null) return;
-
-        string behavior = behaviorTracker.GetBehaviorType();
-        if (!string.IsNullOrEmpty(behavior))
+        if (agent.velocity.sqrMagnitude > 0.1f)
         {
-            enemyAI.EvolveGene(behavior);
-            behaviorTracker.ResetBehavior();
+            Quaternion targetRotation = Quaternion.LookRotation(agent.velocity.normalized);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
         }
     }
 
-    /// <summary>
-    /// Returns true if enemy is currently in combat-related states.
-    /// </summary>
     private bool IsInCombatState()
     {
         var state = stateManager.currentState;
         return state == EnemyStateManager.EnemyState.Chase || state == EnemyStateManager.EnemyState.Attack;
     }
 
-        public void PlayHitAnimation()
-{
-    if (animator != null)
+    private void ApplyGrudgeBehavior()
     {
-        animator.SetTrigger("hit");
+        if (grudgeMemory == null) return;
+
+        int grudge = grudgeMemory.GetGrudgeLevel();
+        attackDistance += grudge * 0.5f;
+        chaseDistance += grudge * 1f;
+        agent.speed += grudge * 0.2f;
+
+        Debug.Log($"[Grudge AI] Adjusted stats — Attack: {attackDistance}, Chase: {chaseDistance}");
     }
-}
+
+    private void ValidatePlayerHealthSystem()
+    {
+        var playerHealth = player.GetComponent<HealthSystem>();
+        if (playerHealth != null)
+            Debug.Log("✅ Found HealthSystem on player.");
+        else
+            Debug.LogError("❌ Player has no HealthSystem component!");
+    }
+
+    public void PlayHitAnimation()
+    {
+        if (animator != null)
+        {
+            animator.SetTrigger("hit");
+        }
+        else
+        {
+            Debug.LogWarning("❌ Animator is null in PlayHitAnimation()");
+        }
+    }
+
+    #endregion
 }

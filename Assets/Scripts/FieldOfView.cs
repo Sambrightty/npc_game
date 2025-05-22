@@ -13,7 +13,7 @@ public enum AwarenessState
 
 /// <summary>
 /// Handles field of view detection and awareness logic for an enemy NPC.
-/// </summary>
+/// </summary> 
 public class FieldOfView : MonoBehaviour
 {
     [Header("Field of View Settings")]

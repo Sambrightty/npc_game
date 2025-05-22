@@ -29,11 +29,11 @@ public class HealthSystem : MonoBehaviour
 
     private bool hasPlayedLowHealthCue = false;
     private bool hasPlayedHurtVoice = false;
+     private Animator animator;
 
     private void Start()
     {
         currentHealth = maxHealth;
-
         grudgeMemory = GetComponent<EnemyGrudgeMemory>();
 
         if (healthBar != null)
@@ -43,7 +43,10 @@ public class HealthSystem : MonoBehaviour
         }
 
         if (lowHealthOverlay != null)
-            lowHealthOverlay.enabled = false;
+        {
+            lowHealthOverlay.color = transparentRed;
+            lowHealthOverlay.enabled = true;
+        }
     }
 
     private void Update()
@@ -66,7 +69,7 @@ public class HealthSystem : MonoBehaviour
     /// <summary>
     /// Applies damage, updates health, handles death, and low-health reactions.
     /// </summary>
-public void TakeDamage(float amount)
+ public void TakeDamage(float amount)
 {
     if (IsBlocking)
     {
@@ -74,43 +77,55 @@ public void TakeDamage(float amount)
         return;
     }
 
+    // Apply damage
     currentHealth -= amount;
     currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
 
-    Debug.Log($"{(isPlayer ? "Player" : "Enemy")} took damage: {amount}, health now: {currentHealth}");
+    Debug.Log($"{gameObject.name} took damage: {amount}, health now: {currentHealth}");
 
+    // Update health bar
     if (healthBar != null)
         healthBar.value = currentHealth;
 
-    // ✅ Play hit animation
+    // Trigger hit animation
     if (isPlayer)
     {
-        PlayerController controller = GetComponent<PlayerController>();
+        Debug.Log("Player got hit – trying to trigger animation");
+        var controller = GetComponent<PlayerController>();
         if (controller != null)
         {
+            Debug.Log("✅ Found PlayerController");
             controller.PlayHitAnimation();
+        }
+        else
+        {
+            Debug.LogWarning("❌ PlayerController NOT found!");
         }
     }
     else
     {
-        EnemyFSM enemyFSM = GetComponent<EnemyFSM>();
+        Debug.Log("Enemy got hit – trying to trigger animation");
+        var enemyFSM = GetComponent<EnemyFSM>();
         if (enemyFSM != null)
         {
+            Debug.Log("✅ Found EnemyFSM");
             enemyFSM.PlayHitAnimation();
         }
     }
 
+    // Handle low health effects (UI/audio)
     HandleLowHealthEffects();
 
+    // Check death
     if (currentHealth <= 0)
     {
         HandleDeath();
     }
 
-    // Enemy voice logic
+    // Play enemy low-health voice cue once
     if (!isPlayer && currentHealth <= maxHealth * 0.3f && !hasPlayedHurtVoice)
     {
-        VoiceManager voiceManager = GetComponent<VoiceManager>();
+        var voiceManager = GetComponent<VoiceManager>();
         if (voiceManager != null)
         {
             voiceManager.PlayHurtVoice();
@@ -118,6 +133,16 @@ public void TakeDamage(float amount)
         }
     }
 }
+
+
+
+// public void TakeDamage(float amount)
+// {
+//     currentHealth -= amount;
+//     currentHealth = Mathf.Max(currentHealth, 0);
+
+//     Debug.Log($"{gameObject.name} took damage: {amount}, health now: {currentHealth}");
+// }
 
 
     /// <summary>
@@ -149,9 +174,7 @@ public void TakeDamage(float amount)
     {
         bool isLow = currentHealth <= lowHealthThreshold;
 
-        if (lowHealthOverlay != null)
-            lowHealthOverlay.enabled = isLow;
-
+        // Audio cue
         if (lowHealthAudio != null)
         {
             if (isLow && !hasPlayedLowHealthCue)
@@ -159,7 +182,7 @@ public void TakeDamage(float amount)
                 lowHealthAudio.Play();
                 hasPlayedLowHealthCue = true;
             }
-            else if (!isLow)
+            else if (!isLow && lowHealthAudio.isPlaying)
             {
                 lowHealthAudio.Stop();
                 hasPlayedLowHealthCue = false;
@@ -190,13 +213,13 @@ public void TakeDamage(float amount)
     {
         if (isPlayer)
         {
-            PlayerController controller = GetComponent<PlayerController>();
+            var controller = GetComponent<PlayerController>();
             if (controller != null)
                 controller.enabled = false;
         }
         else
         {
-            EnemyFSM fsm = GetComponent<EnemyFSM>();
+            var fsm = GetComponent<EnemyFSM>();
             if (fsm != null)
                 fsm.enabled = false;
         }

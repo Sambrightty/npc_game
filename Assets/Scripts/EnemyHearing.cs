@@ -1,43 +1,40 @@
 using UnityEngine;
 
 /// <summary>
-/// EnemyHearing simulates basic auditory perception for the enemy.
-/// It detects the player's presence via a trigger zone and notifies
-/// the FieldOfView system if the player is making noise.
+/// Simulates basic auditory perception for the enemy.
+/// If the player enters the hearing zone and is making noise,
+/// the enemy becomes suspicious via the FieldOfView system.
 /// </summary>
 public class EnemyHearing : MonoBehaviour
 {
-    [Tooltip("Reference to the FieldOfView script handling vision and awareness.")]
-    public FieldOfView fovScript;
+    [Tooltip("FieldOfView component responsible for awareness handling.")]
+    [SerializeField] private FieldOfView fovScript;
 
     /// <summary>
-    /// Called when another collider enters the enemy's hearing trigger.
-    /// If the collider is the player and is making a loud action,
-    /// the enemy reacts by becoming suspicious.
+    /// Triggered when a collider enters the enemy's hearing range.
+    /// If it's the player and they are making noise, the enemy reacts.
     /// </summary>
-    /// <param name="other">The collider entering the trigger.</param>
+    /// <param name="other">The collider entering the hearing trigger.</param>
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player"))
+        if (IsLoudPlayer(other))
         {
-            // TODO: Replace PlayerIsLoud with real checks (e.g., sprinting, shooting)
-            if (PlayerIsLoud(other))
-            {
-                Debug.Log("👂 Sound detected! Enemy is now suspicious.");
-                fovScript.HearPlayer(); // Triggers a state change or awareness shift
-            }
+            Debug.Log("👂 Sound detected! Enemy is now suspicious.");
+            fovScript?.HearPlayer(); // Notify FOV script to increase awareness
         }
     }
 
     /// <summary>
-    /// Determines if the player is performing a loud action.
-    /// Currently stubbed to always return true for testing purposes.
+    /// Determines if the collider is a noisy player.
+    /// In the future, replace with real conditions (e.g., sprinting).
     /// </summary>
-    /// <param name="player">The player collider.</param>
-    /// <returns>True if the player is loud (e.g., sprinting); otherwise false.</returns>
-    private bool PlayerIsLoud(Collider player)
+    /// <param name="collider">The collider to check.</param>
+    /// <returns>True if the collider is a loud player.</returns>
+    private bool IsLoudPlayer(Collider collider)
     {
-        // Placeholder for actual sound-based logic (e.g., velocity check, animation state)
-        return true;
+        if (!collider.CompareTag("Player")) return false;
+
+        // TODO: Add checks for actual noise-producing actions (e.g., sprinting, jumping)
+        return true; // Stub: Assume player is always loud
     }
 }

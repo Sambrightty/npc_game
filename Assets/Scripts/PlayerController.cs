@@ -30,7 +30,7 @@ public class PlayerController : MonoBehaviour
     private Rigidbody rb;
     private HealthSystem healthSystem;
     private Animator animator;
-
+Vector3 inputDirection;
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -38,38 +38,65 @@ public class PlayerController : MonoBehaviour
         animator = GetComponent<Animator>();
     }
 
-    void Update()
-    {
-        Move();
-        HandlePunchInput();
-        HandleBlockInput();
-        HandleHealInput();
-    }
+ void Update()
+{
+    HandlePunchInput();
+    HandleBlockInput();
+    HandleHealInput();
+}
+
 
     /// <summary>
     /// Handles player movement using WASD/Arrow keys.
     /// Also sets walking animation.
     /// </summary>
-   void Move()
+    void Move()
+    {
+        float h = Input.GetAxis("Horizontal");
+        float v = Input.GetAxis("Vertical");
+
+        Vector3 inputDirection = new Vector3(h, 0f, v).normalized;
+
+        bool isWalking = inputDirection.magnitude >= 0.1f;
+        animator.SetBool("isWalking", isWalking);
+
+        if (isWalking)
+        {
+            // Rotate towards the input direction
+            Quaternion targetRotation = Quaternion.LookRotation(inputDirection);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10f * Time.deltaTime);
+
+            // Move directly in the input direction
+            Vector3 move = inputDirection * moveSpeed * Time.deltaTime;
+            rb.MovePosition(rb.position + move);
+        }
+    }
+
+    void HandleMovement()
 {
     float h = Input.GetAxis("Horizontal");
     float v = Input.GetAxis("Vertical");
-    Vector3 inputDirection = new Vector3(h, 0, v).normalized;
 
-    // Update walking animation state
+    inputDirection = new Vector3(h, 0f, v).normalized;
+
     bool isWalking = inputDirection.magnitude >= 0.1f;
     animator.SetBool("isWalking", isWalking);
 
     if (isWalking)
     {
-        // Rotate the player towards the movement direction
-        Quaternion toRotation = Quaternion.LookRotation(inputDirection, Vector3.up);
-        transform.rotation = Quaternion.Slerp(transform.rotation, toRotation, 10f * Time.deltaTime);
+        // Rotate towards the movement direction
+        Quaternion targetRotation = Quaternion.LookRotation(inputDirection);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10f * Time.fixedDeltaTime);
 
-        // Move the player in the direction they are facing
-        Vector3 moveDir = transform.forward * moveSpeed * Time.deltaTime;
-        rb.MovePosition(transform.position + moveDir);
+        // Use FixedDeltaTime and update in FixedUpdate
+        Vector3 move = inputDirection * moveSpeed * Time.fixedDeltaTime;
+        rb.MovePosition(rb.position + move);
     }
+}
+
+void FixedUpdate()
+{
+    HandleMovement(); // Use new physics-based movement
 }
 
     
@@ -106,6 +133,15 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    //  void Update()
+    // {
+    //     if (Input.GetKeyDown(KeyCode.H))
+    //     {
+    //         animator.SetTrigger("hit");
+    //         Debug.Log("🔧 Manual hit trigger");
+    //     }
+    // }
+
     /// <summary>
     /// Toggles the player's block state and informs the HealthSystem.
     /// </summary>
@@ -132,41 +168,44 @@ public class PlayerController : MonoBehaviour
     /// Casts a punch ray forward to hit enemies within range.
     /// Applies damage if enemy is not blocking.
     /// </summary>
-    void Punch()
+void Punch()
+{
+    Vector3 origin = punchOrigin.position;
+    Vector3 direction = transform.forward;
+
+    Debug.DrawRay(origin, direction * punchRange, Color.red, 1f);
+    Debug.Log("🚀 Punch Raycast from: " + origin + " Direction: " + direction);
+
+    if (Physics.Raycast(origin, direction, out RaycastHit hit, punchRange, enemyLayer))
     {
-        Vector3 origin = punchOrigin.position;
-        Vector3 direction = transform.forward;
+        Debug.Log("👊 Punch hit: " + hit.collider.name);
+        HealthSystem enemyHealth = hit.collider.GetComponentInParent<HealthSystem>();
 
-        Debug.DrawRay(origin, direction * punchRange, Color.red, 1f);
-
-        if (Physics.Raycast(origin, direction, out RaycastHit hit, punchRange, enemyLayer))
+        if (enemyHealth != null)
         {
-            Debug.Log("👊 Punch hit: " + hit.collider.name);
-            HealthSystem enemyHealth = hit.collider.GetComponentInParent<HealthSystem>();
-
-            if (enemyHealth != null)
+            Debug.Log("🧠 Found HealthSystem on: " + hit.collider.name);
+            if (!enemyHealth.IsBlocking)
             {
-                if (!enemyHealth.IsBlocking)
-                {
-                    enemyHealth.TakeDamage(punchDamage);
-                    punchCount++;
-                    Debug.Log("✅ Enemy hit! Health reduced.");
-                }
-                else
-                {
-                    Debug.Log("🛡️ Enemy blocked the punch!");
-                }
+                enemyHealth.TakeDamage(punchDamage);
+                punchCount++;
+                Debug.Log("✅ Enemy hit! Health reduced.");
             }
             else
             {
-                Debug.LogWarning("Hit object has no HealthSystem: " + hit.collider.name);
+                Debug.Log("🛡️ Enemy blocked the punch!");
             }
         }
         else
         {
-            Debug.Log("❌ Punch missed.");
+            Debug.LogWarning("⚠️ No HealthSystem on: " + hit.collider.name);
         }
     }
+    else
+    {
+        Debug.Log("❌ Punch missed.");
+    }
+}
+
 
     /// <summary>
     /// Returns the current blocking state of the player.
@@ -195,10 +234,19 @@ public class PlayerController : MonoBehaviour
     /// <summary>
     /// Optional: Trigger hit reaction externally
     /// </summary>
-    public void PlayHitAnimation()
+public void PlayHitAnimation()
+{
+    if (animator != null)
     {
-        animator.SetTrigger("isHit");
+        Debug.Log("🎬 Attempting to trigger 'hit'");
+        animator.SetTrigger("hit");
     }
+    else
+    {
+        Debug.LogWarning("❌ Animator is null in PlayHitAnimation()");
+    }
+}
+
 
     
 }

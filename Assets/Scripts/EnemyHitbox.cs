@@ -12,17 +12,22 @@ public class EnemyHitbox : MonoBehaviour
     /// </summary>
     /// <param name="other">The collider entering the trigger.</param>
     private void OnTriggerEnter(Collider other)
+{
+    if (other.CompareTag("Player"))
     {
-        if (other.CompareTag("Player"))
-        {
-            Debug.Log("👊 Enemy hit the player!");
+        Debug.Log("👊 Enemy hit the player!");
 
-            // Try to apply damage to the player via HealthSystem
-            HealthSystem playerHealth = other.GetComponent<HealthSystem>();
-            if (playerHealth != null)
-            {
-                playerHealth.TakeDamage(10f);
-            }
+        // Search for HealthSystem on this object or its parents
+        HealthSystem playerHealth = other.GetComponentInParent<HealthSystem>();
+        if (playerHealth != null)
+        {
+            playerHealth.TakeDamage(10f);
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ Could not find HealthSystem on Player!");
         }
     }
+}
+
 }
