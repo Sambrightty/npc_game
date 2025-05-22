@@ -1,88 +1,137 @@
-# 🎮 Adaptive Enemy NPC System (Unity - Final Year Project)
+🧠 Adaptive Enemy NPC in Unity
+This project demonstrates an adaptive Enemy NPC using Finite State Machine (FSM), Genetic Algorithm (GA), Perception (Vision & Hearing), and a Behavior Tree design, built in Unity (v3.12.1.0). It features a 1v1 combat system with realistic combat behaviors, health systems, contextual voice lines, and a responsive UI.
 
-This Unity project showcases an intelligent, adaptive Enemy NPC system capable of perceiving, reacting to, and learning from player behavior in a 3D arena. Built for academic research, it integrates perception mechanics, a finite state machine (FSM), and a foundation for adaptive AI and memory systems.
+🎮 Game Overview
+The game is a stylized 1v1 arena where the Player and an Enemy NPC engage in melee combat. The enemy observes the player's tactics and adapts over time, making each session progressively more challenging.
 
----
+🔥 Core Features
+✅ Finite State Machine-based Enemy AI
 
-## ✅ Completed Features
+✅ Adaptive Learning with Genetic Algorithm
 
-### 🔧 Phase 1: Core Setup
+✅ Enemy Perception (Line of Sight + Hearing System)
 
-- Organized Unity project structure: Scripts, Prefabs, UI, Audio, etc.
-- Built enclosed 3D test arena with obstacles and lighting.
-- Integrated Unity NavMesh:
-  - Baked navigation mesh.
-  - Attached `NavMeshAgent` to enemy.
+✅ Health System with Punch/Block Mechanics
 
-### 👁️ Phase 2: Enemy Perception
+✅ Red-Damage Overlay & Low-Health Effects
 
-- Field of View (FoV) detection using raycasting and angle logic.
-- Line-of-sight blocking via `Physics.Raycast`.
-- Awareness states: **Unaware**, **Suspicious**, **Alerted**, **Engaged**.
-- Auditory detection using trigger collider (e.g., for sprint sounds).
-- Debug color/log feedback based on awareness level.
+✅ UI Panels: Start, Pause, Instruction, Quit, Health Bars
 
-### 🤖 Phase 3: Finite State Machine (FSM)
+✅ Voice Cues for Hurt, Victory, Taunt, etc.
 
-- Enemy FSM with states: **Patrol**, **Chase**, **Attack**, **Search**, **Retreat**.
-- Waypoint-based patrol.
-- Navigation and chasing via NavMeshAgent.
-- Basic melee attack with damage debug logging.
-- Retreat when health is low.
+✅ Player Behavior Tracking
 
-### ❤️ Health System
+✅ Integrated Behavior Tree (Design Reference)
 
-- `HealthSystem.cs`: modular, reusable for player and enemy.
-- Tracks health, applies damage, handles death logic.
+🛠️ Technologies Used
+Unity 3.12.1.0
 
-### 🧍 Player Combat & Controls
+C#
 
-- Third-person movement system.
-- Attack input with animations.
-- Combat interaction integrated with enemy hitbox and health.
+Mixamo animations (Enemy)
 
-### 🖥️ UI & Game Flow
+Custom FSM & GA implementation
 
-- Health bars for both player and enemy.
-- UI feedback on damage/death.
-- Pause menu, instructions overlay, restart and quit options.
-- End screen based on win/loss condition.
+draw.io for behavior tree design
 
----
+🗂️ Folder Structure
+arduino
+CopyEdit
+📦Assets
+┣ 📂Animations
+┣ 📂Audio
+┣ 📂Materials
+┣ 📂Models
+┣ 📂Prefabs
+┣ 📂Scenes
+┣ 📂Scripts
+┃ ┣ 📜EnemyFSM.cs
+┃ ┣ 📜EnemyState.cs
+┃ ┣ 📜EnemyGrudgeMemory.cs
+┃ ┣ 📜PlayerController.cs
+┃ ┣ 📜PlayerBehaviorTracker.cs
+┃ ┣ 📜HealthSystem.cs
+┃ ┣ 📜VoiceManager.cs
+┃ ┣ 📜UIManager.cs
+┃ ┣ 📜FieldOfView.cs
+┃ ┣ 📜EnemyHearing.cs
+┃ ┣ 📜GeneticAlgorithm.cs
+┃ ┗ 📜Utils.cs
+┗ 📂UI
 
-## ⚠️ Remaining Task
+🧠 Behavior Trees
+📌 Enemy Behavior Tree includes:
+Patrol
 
-| Component                   | Status         | Details                                                                    |
-| --------------------------- | -------------- | -------------------------------------------------------------------------- |
-| 🧍 Player & Enemy 3D Models | ⚙️ In Progress | Import distinctive animated models for player and enemy.                   |
-| 🌆 Arena Visuals            | ⚙️ In Progress | Replace placeholders with textured props, environment packs, and lighting. |
-| 🕺 Animation Assignment     | ⚙️ In Progress | Attach walk, idle, attack, hit, and die animations using Animator.         |
+Search
 
-> 💡 _All gameplay logic and systems are complete. Only visual polish (3D/Animation) remains._
+Chase
 
----
+Attack
 
-## 🔧 Tech Stack
+Retreat
 
-- Unity 2021+
-- C# Scripts
-- NavMesh System
-- FSM Architecture
-- Raycasting & Trigger Colliders
-- Unity UI Toolkit
+Adapt using GA based on player style
 
----
+📌 Player Behavior Tree includes:
+Punch
 
-## 🎯 Final Project Goals
+Block
 
-- ✅ Core gameplay & combat loop
-- ✅ AI behavior switching via FSM
-- ✅ Player combat, movement, and animations
-- ✅ UI with real-time health & state feedback
-- ✅ End-game logic with restart and quit flow
-- 🔜 Replace placeholders with finalized 3D models and animation assets
+Move
 
----
+Retreat
 
-📌 **Project Status:**  
-🟢 _95% complete — core mechanics and logic are done. Awaiting final 3D model & animation integration._
+Heal
+
+👉 Diagrams are available under /Docs or as SVGs in the repo.
+
+🚀 How to Run
+Clone the repo:
+
+bash
+CopyEdit
+git clone https://github.com/your-username/game_name.git
+
+Open in Unity (v3.12.1.0 or later)
+
+Load the MainScene from Assets/Scenes
+
+Hit ▶️ Play!
+
+🧪 Controls
+Action
+Key
+Move
+Arrow Keys
+Punch
+Space (Player)
+Block
+B
+Heal Player
+H
+
+📈 Future Improvements
+✅ Refactor FSM into modular states
+
+🔲 Add combo system for player
+
+🔲 Visualize behavior tree at runtime
+
+🔲 Implement sound-based distractions
+
+🔲 Multiplayer 1v1 over LAN
+
+🔲 Skill-based upgrades and unlocks
+
+🙌 Credits
+Mixamo for 3D enemy model and animations
+
+Unity Asset Store (Free UI Pack)
+
+Audio sources: freesound.org
+
+Developed by [Your Name]
+
+📄 License
+MIT License. Feel free to fork, improve, or build on it!
