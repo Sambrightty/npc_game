@@ -131,7 +131,7 @@ Unity Asset Store (Free UI Pack)
 
 Audio sources: freesound.org
 
-Developed by [Your Name]
+Developed by [Mahe Mustapha Hashim]
 
 📄 License
 MIT License. Feel free to fork, improve, or build on it!
