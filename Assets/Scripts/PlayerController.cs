@@ -30,6 +30,10 @@ public class PlayerController : MonoBehaviour
     private Rigidbody rb;
     private HealthSystem healthSystem;
     private Animator animator;
+
+    public GameObject punchHitbox; 
+
+
 Vector3 inputDirection;
     void Start()
     {
@@ -99,20 +103,6 @@ void FixedUpdate()
     HandleMovement(); // Use new physics-based movement
 }
 
-    
-
-    /// <summary>
-    /// Checks for punch input and triggers attack logic and animation.
-    /// </summary>
-    void HandlePunchInput()
-    {
-        if (Input.GetKeyDown(punchKey))
-        {
-            animator.SetTrigger("isPunching");
-            Punch();
-            lastCombatTime = Time.time;
-        }
-    }
 
     /// <summary>
     /// Checks for block key press and toggles block state accordingly.
@@ -247,6 +237,23 @@ public void PlayHitAnimation()
     }
 }
 
+void HandlePunchInput()
+{
+    if (Input.GetKeyDown(punchKey))
+    {
+        animator.SetTrigger("isPunching");
+        StartCoroutine(ActivateHitboxTemporarily());
+        Punch(); // Optional if you're also using raycast logic
+        lastCombatTime = Time.time;
+    }
+}
+
+IEnumerator ActivateHitboxTemporarily()
+{
+    punchHitbox.SetActive(true);
+    yield return new WaitForSeconds(0.3f); // Duration punch is active
+    punchHitbox.SetActive(false);
+}
 
     
 }

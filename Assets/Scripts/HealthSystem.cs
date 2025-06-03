@@ -35,6 +35,7 @@ public class HealthSystem : MonoBehaviour
     {
         currentHealth = maxHealth;
         grudgeMemory = GetComponent<EnemyGrudgeMemory>();
+         Debug.Log($"{gameObject.name} - isPlayer: {isPlayer}");
 
         if (healthBar != null)
         {

@@ -21,7 +21,7 @@ public class EnemyHitbox : MonoBehaviour
         HealthSystem playerHealth = other.GetComponentInParent<HealthSystem>();
         if (playerHealth != null)
         {
-            playerHealth.TakeDamage(10f);
+            playerHealth.TakeDamage(5f);
         }
         else
         {

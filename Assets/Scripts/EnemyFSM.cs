@@ -19,6 +19,11 @@ public class EnemyFSM : MonoBehaviour
     private VoiceManager voiceManager;
     private Animator animator;
 
+    [Header("Retreat Settings")]
+    public float healingRate = 5f;
+    public Transform retreatPoint; // <- ADD THIS
+
+
     [Header("State Thresholds")]
     public float chaseDistance = 10f;
     public float attackDistance = 2f;
@@ -27,8 +32,8 @@ public class EnemyFSM : MonoBehaviour
     [Header("Search Settings")]
     public float searchDuration = 5f;
 
-    [Header("Retreat Settings")]
-    public float healingRate = 5f;
+    // [Header("Retreat Settings")]
+    // public float healingRate = 5f;
 
     private float attackCooldown = 1.5f;
     private float attackTimer;
@@ -217,8 +222,17 @@ public class EnemyFSM : MonoBehaviour
     {
         if (!isRetreating)
         {
-            Vector3 directionAway = (transform.position - player.position).normalized;
-            retreatTarget = transform.position + directionAway * 10f;
+            if (retreatPoint != null)
+{
+    retreatTarget = retreatPoint.position;
+}
+else
+{
+    Debug.LogWarning("⚠️ Retreat point not set! Falling back to dynamic retreat.");
+    Vector3 directionAway = (transform.position - player.position).normalized;
+    retreatTarget = transform.position + directionAway * 10f;
+}
+
 
             if (NavMesh.SamplePosition(retreatTarget, out NavMeshHit hit, 10f, NavMesh.AllAreas))
             {
@@ -234,21 +248,22 @@ public class EnemyFSM : MonoBehaviour
         }
     }
 
-    private IEnumerator HealOverTime()
+   private IEnumerator HealOverTime()
+{
+    Debug.Log("💊 Enemy starts healing...");
+
+    while (healthSystem.currentHealth < healthSystem.maxHealth)
     {
-        Debug.Log("💊 Enemy starts healing...");
-
-        while (healthSystem.currentHealth < healthSystem.maxHealth * 0.6f)
-        {
-            healthSystem.Heal(healingRate * Time.deltaTime);
-            yield return null;
-        }
-
-        Debug.Log("✅ Enemy healed. Returning to patrol.");
-        isHealing = false;
-        isRetreating = false;
-        stateManager.SetState(EnemyStateManager.EnemyState.Patrol);
+        healthSystem.Heal(healingRate * Time.deltaTime);
+        yield return null;
     }
+
+    Debug.Log("✅ Enemy fully healed. Returning to patrol.");
+    isHealing = false;
+    isRetreating = false;
+    stateManager.SetState(EnemyStateManager.EnemyState.Patrol);
+}
+
 
     #endregion
 
