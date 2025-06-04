@@ -71,25 +71,25 @@ public class EnemyStateManager : MonoBehaviour
             switch (newState)
             {
                 case EnemyState.Patrol:
-                    animator.SetBool("isWalking", true);
-                    animator.SetBool("isRunning", false);
-                    animator.SetBool("isAttacking", false);
+                    // animator.SetBool("isWalking", true);
+                    // animator.SetBool("isRunning", false);
+                    // animator.SetBool("isAttacking", false);
                     break;
 
                 case EnemyState.Chase:
-                    animator.SetBool("isWalking", false);
-                    animator.SetBool("isRunning", true);
+                    // animator.SetBool("isWalking", false);
+                    // animator.SetBool("isRunning", true);
                     break;
 
                 case EnemyState.Attack:
-                    animator.SetBool("isWalking", false);
-                    animator.SetBool("isRunning", false);
-                    animator.SetTrigger("attack");
+                    // animator.SetBool("isWalking", false);
+                    // animator.SetBool("isRunning", false);
+                    // animator.SetTrigger("attack");
                     break;
 
                 default:
-                    animator.SetBool("isWalking", false);
-                    animator.SetBool("isRunning", false);
+                    // animator.SetBool("isWalking", false);
+                    // animator.SetBool("isRunning", false);
                     break;
             }
         }
